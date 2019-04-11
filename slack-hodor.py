@@ -52,34 +52,52 @@ def distance_bw_periods(p1, p2):
 
 
 class Reservation:
-    def __init__(self, room, start, end, user, at):
+    def __init__(self, room, start, end, reserved_by, reserved_at):
         self._room = room
         self._start = start
         self._end = end
-        self._user = user
-        self._at = at
+        self._reserved_by = reserved_by
+        self._reserved_at = reserved_at
+        self._canceled_by = ""
+        self._canceled_at = 0
 
     def __str__(self):
         room = self._room
         date_kst = epoch_to_kst(self._start, "%Y-%m-%d")
         start_kst = epoch_to_kst(self._start, "%H:%M")
         end_kst = epoch_to_kst(self._end + 1, "%H:%M")
-        reserved_by = "<@%s>" % self._user
-        reserved_at = epoch_to_kst(self._at, "%Y-%m-%d %H:%M:%S")
-        return "[%s, %s %s ~ %s] reserved by %s at %s" % (
-            room,
-            date_kst,
-            start_kst,
-            end_kst,
-            reserved_by,
-            reserved_at,
-        )
+        if self._canceled_at == 0:
+            reserved_by = "<@%s>" % self._reserved_by
+            reserved_at = epoch_to_kst(self._reserved_at, "%Y-%m-%d %H:%M:%S")
+            return "[%s, %s %s ~ %s] reserved by %s at %s" % (
+                room,
+                date_kst,
+                start_kst,
+                end_kst,
+                reserved_by,
+                reserved_at,
+            )
+        else:
+            canceled_by = "<@%s>" % self._canceled_by
+            canceled_at = epoch_to_kst(self._canceled_at, "%Y-%m-%d %H:%M:%S")
+            return "[%s, %s %s ~ %s] canceled by %s at %s" % (
+                room,
+                date_kst,
+                start_kst,
+                end_kst,
+                canceled_by,
+                canceled_at,
+            )
 
     def time_slot(self):
         return [self._start, self._end]
 
-    def user(self):
-        return self._user
+    def reserved_by(self):
+        return self._reserved_by
+
+    def cancel(self, canceled_by, canceled_at):
+        self._canceled_by = canceled_by
+        self._canceled_at = canceled_at
 
 
 def make_help(bot_name):
@@ -362,6 +380,7 @@ class RoomKeeper:
 
     def cmd_cancel(self, user, args):
         room, date, start = args
+        now = int(time.time())
 
         # room NOT existed
         if room not in self._reserved_map:
@@ -396,11 +415,12 @@ class RoomKeeper:
         self.__refresh_bosses()
 
         # neither owner nor boss
-        if re.user() != user and not self.__is_my_boss(user):
+        if re.reserved_by() != user and not self.__is_my_boss(user):
             msg = "You don't have permission to cancel the reservation."
             msg += triple_quote("%s" % re)
             return msg
 
+        re.cancel(user, now)
         del self._reserved_map[room][found_idx]
         self._reserved_map[room].sort(key=lambda x: x._start)
 
