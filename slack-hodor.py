@@ -198,7 +198,7 @@ class RoomKeeper:
             return tokens[0], (tokens[1])
         elif len(tokens) == 5 and tokens[0] == "reserve":
             return tokens[0], (tokens[1], tokens[2], tokens[3], tokens[4])
-        elif len(tokens) == 5 and tokens[0] == "cancel":
+        elif len(tokens) == 4 and tokens[0] == "cancel":
             return tokens[0], (tokens[1], tokens[2], tokens[3])
         return "none", None
 
